@@ -9,7 +9,7 @@ if (!connectionString) {
 const pool = new Pool({
   connectionString,
 });
-
+pool.on('error', (err) => console.error('Unexpected database error:', err.message));
 // retry database connection every 2 seconds, retry approximately 30 times, give up if database remains unavailable
 async function connectWithRetry(maxRetries = 30, delayMs = 2000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

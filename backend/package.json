@@ -5,8 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "seed": "node -e \"require('./db').seed()\""
-  },
+    "seed": "node -e \"require('./db').seed().then(() => process.exit(0)).catch(() => process.exit(1))\""  },
   "dependencies": {
     "express": "^4.19.2",
     "pg": "^8.11.5"
