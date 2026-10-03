@@ -72,24 +72,7 @@ app.post('/api/login', async (req, res) => {
     });
   }
 
-  // SAFETY GUARD:
-  // If username OR password contains a semicolon (;), do not execute SQL.
-  if (username.includes(';') || password.includes(';')) {
-    addLog({
-      mode,
-      username,
-      sql: '',
-      status: 'error',
-      outcome: 'login failed',
-    });
-    return res.status(200).json({
-      success: false,
-      sql: '',
-      rows: [],
-      status: 'error',
-      message: 'Multiple statements are not allowed in this lab.',
-    });
-  }
+  
 
   const hasInjectionChars =
     username.includes("'") ||
@@ -98,7 +81,20 @@ app.post('/api/login', async (req, res) => {
     password.includes('--');
 
   if (mode === 'vulnerable') {
-    // =========================================================================
+        // SAFETY GUARD (vulnerable mode only): block stacked queries like "; DROP TABLE users"
+    // so the lab data cannot be destroyed. Secure mode does not need it.
+    if (username.includes(';') || password.includes(';')) {
+      addLog({ mode, username, sql: '', status: 'error', outcome: 'login failed' });
+      return res.status(200).json({
+        success: false,
+        sql: '',
+        rows: [],
+        status: 'error',
+        message: 'Multiple statements are not allowed in this lab.',
+      });
+    }
+    // ======================================
+    // ===================================
     // VULNERABLE SQL IMPLEMENTATION (EDUCATIONAL LAB ONLY)
     //
     // WARNING: This query is intentionally unsafe and vulnerable to SQL injection.

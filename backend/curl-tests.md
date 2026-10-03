@@ -62,12 +62,7 @@ curl -X POST http://localhost:3000/api/login \
 - **Input**: `admin'--` + `anything` (`mode: "vulnerable"`)
 - **Expected Result**: `success: true`, `status: "vulnerable-bypass"`, `rows: 1`
 
-```bash
-curl -X POST http://localhost:3000/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin\x27--","password":"anything","mode":"vulnerable"}'
-```
-*(or standard curl)*:
+
 ```bash
 curl -X POST http://localhost:3000/api/login \
   -H "Content-Type: application/json" \
