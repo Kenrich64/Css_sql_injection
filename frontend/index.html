@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Injection Lab: Login</title>
+  <!-- Plain CSS stylesheet - No external CDN links to support offline/Docker execution -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top notification strip: Changes colour and descriptive text according to mode -->
+  <aside id="mode-strip" class="mode-strip mode-vulnerable" role="status" aria-live="polite">
+    <span id="mode-strip-label" class="mode-strip-label">Vulnerable mode</span>
+    <span id="mode-strip-desc" class="mode-strip-desc">The server builds the SQL by joining your text into it.</span>
+  </aside>
+
+  <div class="container">
+    <!-- Lab Header -->
+    <header class="lab-header">
+      <h1 class="lab-title">SQL injection: login</h1>
+      <p class="lab-description">
+        Log in normally, try injection inputs in Vulnerable mode, then repeat them in Secure mode.
+      </p>
+    </header>
+
+    <!-- Main 2-Column Section (Stacks on mobile screens) -->
+    <main class="two-column-layout">
+      <!-- Left Card: Login Form & Mode Selection -->
+      <section class="card" aria-labelledby="login-heading">
+        <h2 id="login-heading" class="card-title">Login</h2>
+
+        <form id="login-form" novalidate>
+          <!-- Segmented Control for Security Mode Toggle -->
+          <fieldset class="segmented-control">
+            <legend class="visually-hidden">Select Security Mode</legend>
+            <label class="segmented-option">
+              <input type="radio" name="mode" value="vulnerable" id="mode-vulnerable" checked>
+              <span>Vulnerable mode</span>
+            </label>
+            <label class="segmented-option">
+              <input type="radio" name="mode" value="secure" id="mode-secure">
+              <span>Secure mode</span>
+            </label>
+          </fieldset>
+
+          <!-- Username Input: type="text" so students see exact injection characters -->
+          <div class="form-group">
+            <label for="username" class="form-label">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-input"
+              autocomplete="off"
+              placeholder="e.g. admin"
+              required
+            >
+          </div>
+
+          <!-- Password Input: type="text" so students see exact injection characters -->
+          <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input
+              type="text"
+              id="password"
+              name="password"
+              class="form-input"
+              autocomplete="off"
+              placeholder="e.g. Adm!n@123"
+              required
+            >
+          </div>
+
+          <!-- Form Buttons -->
+          <div class="form-actions">
+            <button type="submit" id="btn-login" class="btn btn-primary">Log in</button>
+            <button type="button" id="btn-reset" class="btn btn-secondary">Reset lab</button>
+          </div>
+        </form>
+
+        <!-- Example Payload Quick-Fill Buttons -->
+        <div class="examples-section">
+          <span class="examples-title">Example inputs</span>
+          <div class="examples-grid">
+            <button
+              type="button"
+              class="btn-example"
+              data-user="admin"
+              data-pass="Adm!n@123"
+              title="Fills normal credentials"
+            >Normal login</button>
+
+            <button
+              type="button"
+              class="btn-example"
+              data-user="admin"
+              data-pass="wrong"
+              title="Fills valid username with incorrect password"
+            >Wrong password</button>
+
+            <button
+              type="button"
+              class="btn-example"
+              data-user="admin'--"
+              data-pass="anything"
+              title="Bypasses password verification using SQL comment syntax"
+            >admin'--</button>
+
+            <button
+              type="button"
+              class="btn-example"
+              data-user="' OR 1=1--"
+              data-pass="anything"
+              title="Bypasses authentication using SQL tautology"
+            >' OR 1=1--</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Card: Execution Results & SQL Query Display -->
+      <section class="card" aria-labelledby="result-heading">
+        <h2 id="result-heading" class="card-title">Result</h2>
+
+        <!-- Dynamic Result Box (Accessible with aria-live="polite") -->
+        <div id="result-box" class="result-box" aria-live="polite">
+          <div class="result-empty">Submit credentials to see query execution and authentication results.</div>
+        </div>
+
+        <!-- Section: Query sent to the database -->
+        <div class="query-section">
+          <h3 class="query-title">Query sent to the database</h3>
+          <div id="sql-display" class="sql-code-box" aria-label="SQL query executed">
+            <span class="sql-placeholder">-- No query executed yet</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Lower Section: Teammate Extension Cards (IDs preserved exactly) -->
+    <div class="stacked-layout">
+      <!-- Query visualizer placeholder card -->
+      <section class="card full-width-card" aria-labelledby="visualizer-heading">
+        <h2 id="visualizer-heading" class="card-title">Query visualizer</h2>
+        <div id="visualizer" class="placeholder-box">Coming soon</div>
+      </section>
+
+      <!-- Activity log placeholder card -->
+      <section class="card full-width-card" aria-labelledby="log-heading">
+        <h2 id="log-heading" class="card-title">Activity log</h2>
+        <div id="log" class="placeholder-box">Coming soon</div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Scripts: Vanilla JS, no build steps or external dependencies -->
+  <script src="fake-api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
