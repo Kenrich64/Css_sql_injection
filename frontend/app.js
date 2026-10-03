@@ -3,14 +3,11 @@
  *
  * This script controls:
  * 1. Mode switching between Vulnerable and Secure representations.
- * 2. Communication with the backend (or fake-api for offline development).
+ * 2. Communication with the real lab backend API endpoints.
  * 3. Sanitized HTML rendering of executed SQL queries with exact user input highlighted.
- * 4. Structured authentication result display with security badges.
+ * 4. Structured authentication result display with security badges and educational explanations.
  * 5. Event dispatching ('lab:result' and 'lab:reset') for modular teammate integration.
  */
-
-// Toggle between mock browser API (true) and real Docker backend (false)
-const USE_FAKE = true;
 
 // DOM Element references
 const modeStrip = document.getElementById('mode-strip');
@@ -24,6 +21,7 @@ const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const btnLogin = document.getElementById('btn-login');
 const btnReset = document.getElementById('btn-reset');
+const resetErrorEl = document.getElementById('reset-error');
 const exampleButtons = document.querySelectorAll('.btn-example');
 
 const resultBox = document.getElementById('result-box');
@@ -76,6 +74,30 @@ function updateModeUI(mode) {
 }
 
 /**
+ * Generates student-friendly explanation based on response status and SQL.
+ *
+ * @param {string} status - Response status
+ * @param {string} sql - SQL query returned from backend
+ * @returns {string} - Pedagogical explanation for students
+ */
+function getStatusExplanation(status, sql) {
+  if (status === 'vulnerable-bypass') {
+    return "Your input changed the logic of the SQL query, so the database returned rows without a valid password. The quote (') closed the text early and -- turned the rest of the query into a comment.";
+  }
+  if (status === 'blocked') {
+    return "In Secure mode your input is sent to the database as data ($1, $2), not as SQL, so the quote and -- characters had no special meaning and the login failed.";
+  }
+  if (status === 'error') {
+    if (sql && typeof sql === 'string' && sql.trim() !== '') {
+      return "Your input broke the SQL syntax and the database rejected the query.";
+    } else {
+      return "The lab's safety guard blocked this input before it reached the database (semicolons are not allowed).";
+    }
+  }
+  return '';
+}
+
+/**
  * Renders the SQL query in the dark code box.
  * Viva explanation:
  * - In Vulnerable mode, the user input is concatenated directly. We wrap the exact
@@ -87,15 +109,28 @@ function updateModeUI(mode) {
  * @param {string} mode - "vulnerable" or "secure"
  * @param {string} username - User typed username
  * @param {string} password - User typed password
+ * @param {string} sql - SQL string returned from the server
  */
-function renderSqlDisplay(mode, username, password) {
+function renderSqlDisplay(mode, username, password, sql) {
+  // If data.sql is empty: show blocked safety guard notice
+  if (!sql || typeof sql !== 'string' || sql.trim() === '') {
+    sqlDisplay.innerHTML = `<span class="sql-placeholder">Query not run: blocked by the lab's safety guard.</span>`;
+    return;
+  }
+
   const safeUser = escapeHtml(username);
   const safePass = escapeHtml(password);
 
   if (mode === 'vulnerable') {
-    sqlDisplay.innerHTML = `<code><span class="sql-keyword">SELECT</span> * <span class="sql-keyword">FROM</span> users <span class="sql-keyword">WHERE</span> username='<mark class="mark-vuln">${safeUser}</mark>' <span class="sql-keyword">AND</span> password='<mark class="mark-vuln">${safePass}</mark>'</code>`;
+    const expectedPattern = "SELECT * FROM users WHERE username='" + username + "' AND password='" + password + "'";
+    if (sql === expectedPattern) {
+      sqlDisplay.innerHTML = `<code><span class="sql-keyword">SELECT</span> * <span class="sql-keyword">FROM</span> users <span class="sql-keyword">WHERE</span> username='<mark class="mark-vuln">${safeUser}</mark>' <span class="sql-keyword">AND</span> password='<mark class="mark-vuln">${safePass}</mark>'</code>`;
+    } else {
+      // If returned SQL does not match expected pattern, show plain without highlighting
+      sqlDisplay.innerHTML = `<code>${escapeHtml(sql)}</code>`;
+    }
   } else {
-    sqlDisplay.innerHTML = `<code><span class="sql-keyword">SELECT</span> * <span class="sql-keyword">FROM</span> users <span class="sql-keyword">WHERE</span> username = $1 <span class="sql-keyword">AND</span> password = $2</code>` +
+    sqlDisplay.innerHTML = `<code><span class="sql-keyword">SELECT</span> * <span class="sql-keyword">FROM</span> users <span class="sql-keyword">WHERE</span> username=$1 <span class="sql-keyword">AND</span> password=$2</code>` +
       `<div class="sql-params-note">` +
       `Sent separately as data: $1 = <mark class="mark-sec">${safeUser}</mark>, $2 = <mark class="mark-sec">${safePass}</mark>` +
       `</div>`;
@@ -107,7 +142,7 @@ function renderSqlDisplay(mode, username, password) {
  * Viva explanation:
  * - vulnerable-bypass (Red): Injection succeeded; attacker altered query structure.
  * - blocked (Teal): Parameterization preserved security; input treated as literal string.
- * - error (Amber): Malformed SQL syntax generated by unbalanced quote.
+ * - error (Amber): Malformed SQL syntax generated by unbalanced quote or safety block.
  * - normal (Grey): Standard legitimate authentication check succeeded or failed normally.
  */
 const BADGE_MAP = {
@@ -137,6 +172,7 @@ const BADGE_MAP = {
  * @param {string} response.message - Explanatory message
  * @param {string} response.status - Status code ("vulnerable-bypass", "blocked", "error", "normal")
  * @param {Array} response.rows - Returned database records
+ * @param {string} response.sql - Executed SQL string
  */
 function renderResultBox(response) {
   const isSuccess = Boolean(response.success);
@@ -144,8 +180,8 @@ function renderResultBox(response) {
   const badgeInfo = BADGE_MAP[status] || BADGE_MAP['normal'];
 
   // Determine headline
-  let headlineText = isSuccess ? 'Login successful' : 'Login failed';
-  let headlineClass = isSuccess ? 'success' : (status === 'error' ? 'error' : 'failed');
+  const headlineText = isSuccess ? 'Login successful' : 'Login failed';
+  const headlineClass = isSuccess ? 'success' : (status === 'error' ? 'error' : 'failed');
 
   // Format who is logged in
   const rows = Array.isArray(response.rows) ? response.rows : [];
@@ -156,6 +192,9 @@ function renderResultBox(response) {
     loggedInText = rows.map((r) => `${escapeHtml(r.username)} (${escapeHtml(r.role)})`).join(', ');
   }
 
+  // Student explanation
+  const explanation = getStatusExplanation(status, response.sql);
+
   resultBox.innerHTML = `
     <div class="result-content">
       <div class="result-header-row">
@@ -164,6 +203,7 @@ function renderResultBox(response) {
       </div>
 
       <p class="result-message">${escapeHtml(response.message || '')}</p>
+      ${explanation ? `<p class="result-explanation">${escapeHtml(explanation)}</p>` : ''}
 
       <div class="result-details-grid">
         <span class="result-label">Logged in as:</span>
@@ -177,7 +217,7 @@ function renderResultBox(response) {
 }
 
 /**
- * Displays a helpful offline / network error state when the backend server is unreachable.
+ * Displays a helpful network error state when the backend server is unreachable.
  */
 function renderNetworkError() {
   resultBox.innerHTML = `
@@ -186,12 +226,33 @@ function renderNetworkError() {
         <h3 class="result-headline failed">Cannot reach the lab server</h3>
         <span class="badge badge-error">Offline</span>
       </div>
-      <p class="result-message">The frontend could not connect to the backend API. Please run:</p>
-      <pre><code>docker compose up --build</code></pre>
+      <p class="result-message">Cannot reach the lab server. Check that Docker is running: docker compose up --build</p>
     </div>
   `;
 
   sqlDisplay.innerHTML = `<span class="sql-placeholder">-- Query failed to reach database</span>`;
+}
+
+/**
+ * Displays error message near reset button without clearing screen.
+ *
+ * @param {string} message - Error description
+ */
+function showResetError(message) {
+  if (resetErrorEl) {
+    resetErrorEl.textContent = message;
+    resetErrorEl.style.display = 'block';
+  }
+}
+
+/**
+ * Clears any reset error message.
+ */
+function clearResetError() {
+  if (resetErrorEl) {
+    resetErrorEl.textContent = '';
+    resetErrorEl.style.display = 'none';
+  }
 }
 
 /**
@@ -203,43 +264,28 @@ function clearOutputs() {
 }
 
 /**
- * Submits login request to either fake-api or live server.
+ * Submits login request to real backend API.
  *
  * @param {string} username - User input username
  * @param {string} password - User input password
  * @param {string} mode - "vulnerable" or "secure"
  */
 async function handleLogin(username, password, mode) {
-  // First, render the query in the code box so the student sees the SQL
-  renderSqlDisplay(mode, username, password);
+  clearResetError();
 
   try {
-    let responseData;
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, mode })
+    });
 
-    if (USE_FAKE) {
-      // Offline mock backend
-      responseData = await fakeLogin(username, password, mode);
-    } else {
-      // Live backend HTTP request
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, mode })
-      });
+    // The backend sends { success, sql, rows, status, message } even on HTTP 400
+    const responseData = await response.json();
 
-      if (!response.ok) {
-        try {
-          responseData = await response.json();
-        } catch {
-          throw new Error(`Server returned HTTP ${response.status}`);
-        }
-      } else {
-        responseData = await response.json();
-      }
-    }
-
-    // Render result cards
+    // Render result card and SQL code box
     renderResultBox(responseData);
+    renderSqlDisplay(mode, username, password, responseData.sql);
 
     // Dispatch custom event for teammate extensions (Query visualizer & Activity log)
     // Viva explanation: CustomEvent decouples components, allowing teammates to add
@@ -262,30 +308,42 @@ async function handleLogin(username, password, mode) {
 }
 
 /**
- * Resets lab state.
+ * Resets lab state by calling backend /api/reset endpoint.
  */
 async function handleReset() {
-  loginForm.reset();
-  // Ensure default mode is reset to vulnerable
-  modeVulnerableRadio.checked = true;
-  updateModeUI('vulnerable');
-
-  clearOutputs();
+  clearResetError();
 
   try {
-    if (USE_FAKE) {
-      if (typeof fakeReset === 'function') {
-        await fakeReset();
-      }
-    } else {
-      await fetch('/api/reset', { method: 'POST' });
-    }
-  } catch (err) {
-    console.warn('Backend reset call encountered an issue:', err);
-  }
+    const response = await fetch('/api/reset', {
+      method: 'POST'
+    });
 
-  // Dispatch custom reset event for teammate extensions
-  document.dispatchEvent(new CustomEvent('lab:reset'));
+    if (!response.ok) {
+      let errorMessage = 'Failed to reset lab';
+      try {
+        const errJson = await response.json();
+        if (errJson && errJson.error) {
+          errorMessage = errJson.error;
+        }
+      } catch {
+        errorMessage = 'Failed to reset lab: HTTP ' + response.status;
+      }
+      showResetError(errorMessage);
+      return; // Do not clear the screen on reset failure
+    }
+
+    // Reset succeeded: clear inputs and reset outputs
+    loginForm.reset();
+    modeVulnerableRadio.checked = true;
+    updateModeUI('vulnerable');
+    clearOutputs();
+
+    // Dispatch custom reset event for teammate extensions
+    document.dispatchEvent(new CustomEvent('lab:reset'));
+  } catch (err) {
+    console.error('Reset request failed:', err);
+    showResetError('Cannot reach the lab server. Check that Docker is running: docker compose up --build');
+  }
 }
 
 // Event Listeners
@@ -316,3 +374,4 @@ exampleButtons.forEach((btn) => {
 
 // Initial setup on page load
 updateModeUI(getSelectedMode());
+

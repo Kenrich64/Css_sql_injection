@@ -479,6 +479,28 @@ body {
   color: var(--color-text-secondary);
 }
 
+.result-explanation {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-main);
+  background-color: var(--color-bg-page);
+  border-left: 3px solid var(--color-border-input);
+  padding: 8px 12px;
+  border-radius: 0 var(--radius-input) var(--radius-input) 0;
+}
+
+.reset-error {
+  display: none;
+  font-size: 13px;
+  color: var(--badge-bypass-text);
+  background-color: var(--badge-bypass-bg);
+  border: 1px solid var(--badge-bypass-border);
+  border-radius: var(--radius-input);
+  padding: 8px 12px;
+  margin-top: -14px;
+  margin-bottom: 18px;
+}
+
 .result-details-grid {
   display: grid;
   grid-template-columns: auto 1fr;
