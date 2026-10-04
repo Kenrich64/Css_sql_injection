@@ -52,6 +52,9 @@ The **SQL injection: login** page opens.
 
 # Task 2: Perform a Normal Login
 
+<img width="922" height="912" alt="image" src="https://github.com/user-attachments/assets/f9490b41-564c-4a28-b023-ed5ce46441aa" />
+
+
 1. Select **Vulnerable mode**.
 2. Click **Normal login**.
 3. Click **Log in**.
@@ -77,6 +80,8 @@ The username and password were placed directly into the SQL query. Because they 
 ---
 
 # Task 3: Bypass the login with `admin'--`
+
+<img width="942" height="906" alt="image" src="https://github.com/user-attachments/assets/e8694b27-a8c3-4830-97c7-e4f79321bfd0" />
 
 1. Stay in **Vulnerable mode**.
 2. Click **admin'--**.
@@ -123,6 +128,9 @@ The database effectively checks the username condition without requiring the ori
 
 # Task 4: Return multiple users with `' OR 1=1--`
 
+<img width="932" height="902" alt="image" src="https://github.com/user-attachments/assets/e5db42c1-3907-4cb1-81f8-e4d53700aa37" />
+
+
 1. Stay in **Vulnerable mode**.
 2. Click **' OR 1=1--**.
 3. Click **Log in**.
@@ -154,6 +162,9 @@ Because the condition becomes true for the available rows, multiple users can be
 
 # Task 5: Observe a SQL syntax error
 
+<img width="946" height="906" alt="image" src="https://github.com/user-attachments/assets/14ddecfc-75e9-4764-a291-8f6e6c9ec971" />
+
+
 1. Stay in **Vulnerable mode**.
 2. Enter only:
 
@@ -161,7 +172,9 @@ Because the condition becomes true for the available rows, multiple users can be
 '
 ```
 
-as the username. 3. Enter any value as the password. 4. Click **Log in**.
+as the username. 
+3. Enter any value as the password. 
+4. Click **Log in**.
 
 ### Expected result
 
@@ -176,6 +189,9 @@ This demonstrates that directly inserting user input can allow the user to inter
 ---
 
 # Task 6: Repeat the attack in Secure mode
+
+<img width="941" height="905" alt="image" src="https://github.com/user-attachments/assets/569314ba-8b09-4561-894a-ec28326fb4c8" />
+
 
 ## Test `admin'--`
 
@@ -248,6 +264,8 @@ This demonstrates why parameterized queries are used to prevent SQL Injection.
 ---
 
 # Task 7: Observe the safety guard
+<img width="917" height="907" alt="image" src="https://github.com/user-attachments/assets/30b89c81-1de4-4b12-a9e4-d69c4f5cbde5" />
+
 
 Use this test only in the supplied local lab.
 
@@ -258,7 +276,9 @@ Use this test only in the supplied local lab.
 '; DROP TABLE users;--
 ```
 
-as the username. 3. Enter any value as the password. 4. Click **Log in**.
+as the username. 
+3. Enter any value as the password. 
+4. Click **Log in**.
 
 ### Expected result
 
@@ -283,6 +303,9 @@ The lab contains a safety guard to prevent stacked/destructive statements from d
 # Task 8: Observe the Query visualizer
 
 After performing a login attempt, look at **Query visualizer**.
+
+<img width="935" height="387" alt="image" src="https://github.com/user-attachments/assets/203788a1-7c69-48a7-aaaf-ee1c4eb23b73" />
+
 
 It contains four stages:
 
@@ -322,6 +345,9 @@ For Secure mode, it should show:
 
 After several login attempts, look at **Activity log**.
 
+<img width="921" height="552" alt="image" src="https://github.com/user-attachments/assets/72c6bb01-ca00-4923-9526-94d7a773d719" />
+
+
 The log records attempts such as:
 
 - Time
@@ -348,6 +374,9 @@ This confirms that the activity log is connected to the real backend rather than
 # Task 10: Reset the lab
 
 1. Click **Reset lab**.
+
+<img width="962" height="885" alt="image" src="https://github.com/user-attachments/assets/3c5edd0f-baa4-426e-9705-0fbbccf4030c" />
+
 
 ### Expected result
 
