@@ -429,8 +429,7 @@ This stops the containers and removes the lab database volume.
 
 # Quick troubleshooting
 
-| Problem | What to
-do |
+| Problem | What to do |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Page does not open | Make sure Docker is running and the server is listening on port 3000 |
 | Changes are not visible | Run `docker compose up --build` and press `Ctrl+F5` |
