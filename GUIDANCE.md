@@ -64,7 +64,8 @@ The **SQL injection: login** page opens.
 
 # Task 2: Perform a Normal Login
 
-<img width="922" height="912" alt="image" src="https://github.com/user-attachments/assets/f9490b41-564c-4a28-b023-ed5ce46441aa" />
+<img width="692" height="767" alt="image" src="https://github.com/user-attachments/assets/3929d0da-6328-4dca-abd0-d53a3f5df250" />
+
 
 1. Select **Vulnerable mode**.
 2. Click **Normal login** (fills `Username: admin` and `Password: Adm!n@123`).
@@ -297,12 +298,16 @@ This module demonstrates how SQL injection can bypass business logic filters (`W
 
 # Task 11: Navigate to the Shop and Browse Normally
 
+<img width="692" height="767" alt="image" src="https://github.com/user-attachments/assets/5699eefc-ee03-4466-979d-a03de4fe6437" />
+
 1. Perform a successful login on `http://localhost:3000` (e.g. using `admin` / `Adm!n@123` or `admin'--`).
 2. Click the **Enter Shop Now →** button (or navigate to `http://localhost:3000/shop.html`).
 3. Verify that **Vulnerable mode** is selected.
 4. Click the **🎁 Gifts** quick category button (or type `Gifts` into the category input) and click **Filter**.
 
 ### Expected result
+
+<img width="765" height="820" alt="image" src="https://github.com/user-attachments/assets/5773268f-f861-48df-8225-26f1804e9dc4" />
 
 - **Header:** Logged in as: **admin (admin)**.
 - **Filter result & SQL panel:**
@@ -332,6 +337,11 @@ This module demonstrates how SQL injection can bypass business logic filters (`W
    /filter?category= Gifts'--
    ```
 4. Click **Filter** (or press Enter).
+
+   
+<img width="712" height="896" alt="image" src="https://github.com/user-attachments/assets/64a3be40-98ec-47c9-b1d1-c84d9d13264a" />
+
+<img width="687" height="592" alt="image" src="https://github.com/user-attachments/assets/6459e21a-87bc-4421-bfa2-f80ec872df60" />
 
 ### Expected result
 
@@ -383,6 +393,10 @@ The quote (`'`) terminates the literal category value, and the comment (`--`) in
    ```
 3. Click **Filter**.
 
+<img width="730" height="891" alt="image" src="https://github.com/user-attachments/assets/311ad7cf-6697-4b09-b476-48f7954dd54f" />
+
+<img width="692" height="605" alt="image" src="https://github.com/user-attachments/assets/ebea97c7-64d5-4af0-afdb-d4c78c7eb3d9" />
+
 ### Expected result
 
 - **PortSwigger-Style Lab Solved Celebration Banner:**
@@ -409,6 +423,11 @@ This payload demonstrates targeted logic injection. The first quote closes the i
    ' OR 1=1--
    ```
 3. Click **Filter**.
+
+<img width="722" height="902" alt="image" src="https://github.com/user-attachments/assets/88748ef7-b6d2-45cd-af04-788468d8c447" />
+
+<img width="697" height="781" alt="image" src="https://github.com/user-attachments/assets/f71bbee3-8217-4667-9a72-34e45eba525c" />
+
 
 ### Expected result
 
@@ -442,6 +461,9 @@ The injection `' OR 1=1--` forms a tautology (`1=1` is always TRUE) and comments
 3. Click the example injection button **`Gifts'--`**.
 4. Click **Filter**.
 
+<img width="711" height="870" alt="image" src="https://github.com/user-attachments/assets/ee290ea9-210a-411b-bfa1-5cbdb41a8581" />
+
+
 ### Expected result
 
 - **Filter result & SQL panel:**
@@ -458,6 +480,9 @@ The injection `' OR 1=1--` forms a tautology (`1=1` is always TRUE) and comments
 
 5. Test the payload **`' OR 1=1--`** in Secure mode and click **Filter**.
    - Result: **0 products returned**.
+  
+<img width="800" height="905" alt="image" src="https://github.com/user-attachments/assets/3252e2a9-6652-440a-8fc5-6d783beafb5b" />
+
 
 ### What happened?
 
@@ -475,6 +500,8 @@ The database precompiles the query structure. The input `Gifts'--` is treated as
 # Task 16: Reset the Shop Lab
 
 1. Click **Reset lab** in the URL simulator bar.
+
+<img width="757" height="857" alt="image" src="https://github.com/user-attachments/assets/f63fdb78-dcbe-4d1d-9094-057a651ebabf" />
 
 ### Expected result
 
