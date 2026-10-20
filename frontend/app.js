@@ -212,6 +212,16 @@ function renderResultBox(response) {
         <span class="result-label">Rows returned:</span>
         <span class="result-value">${rowCount} ${rowCount === 1 ? 'row' : 'rows'}</span>
       </div>
+      ${isSuccess ? `
+      <div class="shop-redirect-banner">
+        <div class="shop-redirect-banner-text">
+          <span class="shop-redirect-banner-title">🎉 Login Verified! Access Granted</span>
+          <span class="shop-redirect-banner-sub">Proceed to browse products and test category SQL injection.</span>
+        </div>
+        <a href="shop.html?category=Gifts&mode=${encodeURIComponent(getSelectedMode())}" class="btn-enter-shop-significant" id="btn-enter-shop">
+          <span>Enter Shop Now</span> &rarr;
+        </a>
+      </div>` : ''}
     </div>
   `;
 }
@@ -301,6 +311,16 @@ async function handleLogin(username, password, mode) {
         }
       })
     );
+
+    // On login success, save user session to grant access to the shop
+    if (responseData.success) {
+      const user = (responseData.rows && responseData.rows[0]) ? responseData.rows[0] : { username, role: 'user' };
+      sessionStorage.setItem('lab_user', JSON.stringify({
+        username: user.username,
+        role: user.role,
+        mode: mode
+      }));
+    }
   } catch (err) {
     console.error('Login request failed:', err);
     renderNetworkError();
