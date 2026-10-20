@@ -313,30 +313,37 @@ The important parts of the project are:
 ```text
 Css_sql_injection/
 ├── backend/
-│   ├── server.js
+│   ├── curl-tests.md
 │   ├── db.js
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── package-lock.json
-│   └── curl-tests.md
+│   └── server.js
 ├── database/
 │   └── init.sql
+├── docs/
+│   ├── aim.md
+│   ├── assignment.md
+│   ├── objective.md
+│   ├── procedure.md
+│   ├── references.md
+│   └── theory.md
 ├── frontend/
-│   ├── index.html
+│   ├── visualizer/
+│   │   ├── log.js
+│   │   ├── visualizer.css
+│   │   └── visualizer.js
 │   ├── app.js
+│   ├── index.html
 │   ├── shop.html
 │   ├── shop.js
-│   ├── style.css
-│   └── visualizer/
-│       ├── visualizer.js
-│       ├── log.js
-│       └── visualizer.css
-├── test/
-│   └── .gitkeep
+│   └── style.css
+├── tests/
 ├── .dockerignore
 ├── .gitignore
-├── README.md
-└── GUIDANCE.md
+├── docker-compose.yml
+├── GUIDANCE.md
+└── README.md
 ```
 
 ---
