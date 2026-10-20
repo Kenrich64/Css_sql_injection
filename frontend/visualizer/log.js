@@ -72,11 +72,14 @@
 
   render();
 
-  // Load attempts that happened before this page was opened
+  // Load attempts that happened before this page was opened (only login attempts)
   fetch('/api/logs')
     .then(function (res) { return res.ok ? res.json() : []; })
     .then(function (list) {
-      if (Array.isArray(list) && !entries.length) { entries = list.slice(-MAX); render(); }
+      if (Array.isArray(list) && !entries.length) {
+        entries = list.filter(function (e) { return e && e.username !== 'shop'; }).slice(-MAX);
+        render();
+      }
     })
     .catch(function () { /* server not reachable: keep the empty state */ });
 })();

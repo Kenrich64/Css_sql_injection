@@ -223,6 +223,106 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// GET /api/products?category=...&mode=...
+app.get('/api/products', async (req, res) => {
+  const category = typeof req.query.category === 'string' ? req.query.category : 'Gifts';
+  const mode = req.query.mode === 'secure' ? 'secure' : 'vulnerable';
+
+  const hasInjectionChars =
+    category.includes("'") ||
+    category.includes('--');
+
+  if (mode === 'vulnerable') {
+    // SAFETY GUARD (vulnerable mode only): block stacked queries like "; DROP TABLE products"
+    if (category.includes(';')) {
+      return res.status(200).json({
+        success: false,
+        sql: '',
+        rows: [],
+        status: 'error',
+        message: 'Multiple statements are not allowed in this lab.',
+      });
+    }
+
+    // Vulnerable SQL implementation: category input is joined directly into the query
+    const sql = `SELECT * FROM products WHERE category = '${category}' AND released = 1`;
+
+    try {
+      const result = await db.query(sql);
+      const rows = result.rows || [];
+
+      // Check if unreleased products were exposed due to injection (released = 0)
+      const unreleasedCount = rows.filter((r) => r.released == 0 || r.released === false).length;
+      const solved = unreleasedCount > 0;
+      let status = 'normal';
+      let outcome = 'query ok';
+      let message = `Loaded ${rows.length} product(s) in category '${category}'.`;
+
+      if (unreleasedCount > 0) {
+        status = 'vulnerable-bypass';
+        outcome = 'injection revealed unreleased';
+        message = `SQL injection successful: ${unreleasedCount} hidden/unreleased product(s) revealed!`;
+      } else if (hasInjectionChars && rows.length > 0) {
+        status = 'vulnerable-bypass';
+        outcome = 'query altered';
+        message = `SQL query altered by input syntax.`;
+      }
+
+      return res.status(200).json({
+        success: true,
+        sql,
+        rows,
+        status,
+        message,
+        unreleasedCount,
+        solved,
+      });
+    } catch (err) {
+      return res.status(200).json({
+        success: false,
+        sql,
+        rows: [],
+        status: 'error',
+        message: err.message,
+        solved: false,
+      });
+    }
+  } else {
+    // SECURE MODE: Parameterized query ($1)
+    const sql = 'SELECT * FROM products WHERE category = $1 AND released = 1';
+
+    try {
+      const result = await db.query(sql, [category]);
+      const rows = result.rows || [];
+
+      const status = hasInjectionChars && rows.length === 0 ? 'blocked' : 'normal';
+      const outcome = status === 'blocked' ? 'attack blocked' : 'query ok';
+      const message = status === 'blocked'
+        ? "In Secure mode your input is sent to the database as data ($1), not as SQL, so quotes and comments had no special meaning."
+        : `Loaded ${rows.length} product(s) in category '${category}'.`;
+
+      return res.status(200).json({
+        success: true,
+        sql,
+        rows,
+        status,
+        message,
+        unreleasedCount: 0,
+        solved: false,
+      });
+    } catch (err) {
+      return res.status(200).json({
+        success: false,
+        sql,
+        rows: [],
+        status: 'error',
+        message: err.message,
+        solved: false,
+      });
+    }
+  }
+});
+
 // GET /api/logs
 app.get('/api/logs', (req, res) => {
   res.json(logs);

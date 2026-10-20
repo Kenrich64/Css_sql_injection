@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Injection Lab: Shop Category Filter</title>
+  <!-- Plain CSS stylesheet - No external CDN links to support offline/Docker execution -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top notification strip: Changes colour and descriptive text according to mode -->
+  <aside id="mode-strip" class="mode-strip mode-vulnerable" role="status" aria-live="polite">
+    <span id="mode-strip-label" class="mode-strip-label">Vulnerable mode</span>
+    <span id="mode-strip-desc" class="mode-strip-desc">The server builds the SQL by joining your text into it.</span>
+  </aside>
+
+  <div class="container">
+    <!-- PortSwigger-Style Lab Solved Celebration Banner -->
+    <div id="lab-solved-banner" class="lab-solved-banner" role="status" aria-live="polite">
+      <span class="lab-solved-badge">Solved</span>
+      <span><strong>Congratulations, you solved the lab!</strong> You successfully retrieved unreleased product data using SQL injection.</span>
+    </div>
+
+    <!-- Lab Header -->
+    <header class="lab-header">
+      <div class="shop-header-row">
+        <h1 class="lab-title">SQL injection: product category filter</h1>
+        <div class="shop-user-badge">
+          <span>Logged in as: <strong id="logged-user">admin</strong> (<span id="logged-role">admin</span>)</span>
+          <a href="index.html" class="btn btn-secondary btn-sm" id="btn-logout" title="Return to Login Lab">&larr; Return to Login</a>
+        </div>
+      </div>
+      <p class="lab-description">
+        Browse shop products by category. The server is supposed to return only released products (<code>WHERE released = 1</code>).
+        Try picking normal categories in both modes, then inject SQL in the category query to reveal confidential, unreleased items!
+      </p>
+    </header>
+
+    <!-- Top Card: Controls, URL Simulator, and Mode Selection -->
+    <section class="card shop-controls-card" aria-labelledby="controls-heading">
+      <h2 id="controls-heading" class="card-title">Category filter controls</h2>
+
+      <!-- Segmented Control for Security Mode Toggle -->
+      <fieldset class="segmented-control" style="margin-bottom: 14px;">
+        <legend class="visually-hidden">Select Security Mode</legend>
+        <label class="segmented-option">
+          <input type="radio" name="mode" value="vulnerable" id="mode-vulnerable" checked>
+          <span>Vulnerable mode</span>
+        </label>
+        <label class="segmented-option">
+          <input type="radio" name="mode" value="secure" id="mode-secure">
+          <span>Secure mode</span>
+        </label>
+      </fieldset>
+
+      <!-- URL Simulation & Category Input -->
+      <form id="filter-form" novalidate>
+        <label for="category-input" class="form-label">Category parameter (URL: <code>shop.html?category=...</code>)</label>
+        <div class="url-bar-container">
+          <span class="url-prefix">/filter?category=</span>
+          <input
+            type="text"
+            id="category-input"
+            name="category"
+            class="url-input"
+            autocomplete="off"
+            value="Gifts"
+            placeholder="e.g. Gifts or '+OR+1=1--"
+            required
+          >
+          <button type="submit" id="btn-filter" class="btn btn-primary btn-sm">Filter</button>
+          <button type="button" id="btn-reset-shop" class="btn btn-secondary btn-sm">Reset lab</button>
+        </div>
+        <div id="reset-error" class="reset-error" role="alert" aria-live="polite"></div>
+      </form>
+
+      <!-- Category Filter Pills -->
+      <div style="margin-top: 6px;">
+        <span class="form-label" style="font-size: 13px; color: var(--color-text-muted);">Quick category buttons:</span>
+        <div class="category-buttons" id="category-pill-container">
+          <button type="button" class="btn-category active" data-category="Gifts">🎁 Gifts</button>
+          <button type="button" class="btn-category" data-category="Clothing">👕 Clothing</button>
+          <button type="button" class="btn-category" data-category="Tech">💻 Tech</button>
+          <button type="button" class="btn-category" data-category="Books">📚 Books</button>
+        </div>
+      </div>
+
+      <!-- Example Payload Quick-Fill Buttons -->
+      <div class="examples-section" style="margin-top: 14px; padding-top: 12px;">
+        <span class="examples-title">Example injection inputs</span>
+        <div class="examples-grid" id="examples-grid">
+          <button
+            type="button"
+            class="btn-example"
+            data-category="Gifts"
+            title="Normal category lookup"
+          >Normal: Gifts</button>
+
+          <button
+            type="button"
+            class="btn-example"
+            data-category="Gifts'--"
+            title="Comment bypass: reveals hidden unreleased items in Gifts!"
+          >Gifts'--</button>
+
+          <button
+            type="button"
+            class="btn-example"
+            data-category="' OR category = 'Gifts'--"
+            title="Targeted OR query: reveals hidden unreleased items in Gifts!"
+          >' OR category = 'Gifts'--</button>
+
+          <button
+            type="button"
+            class="btn-example"
+            data-category="' OR 1=1--"
+            title="Global tautology bypass: reveals all products across all categories!"
+          >' OR 1=1--</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main 2-Column Section: Query/Result on Left, Products on Right -->
+    <main class="two-column-layout">
+      <!-- Left Card: Execution Results & SQL Query Display -->
+      <section class="card" aria-labelledby="result-heading">
+        <h2 id="result-heading" class="card-title">Filter result &amp; SQL</h2>
+
+        <!-- Dynamic Result Box (Accessible with aria-live="polite") -->
+        <div id="result-box" class="result-box" aria-live="polite">
+          <div class="result-empty">Select or enter a category to execute query.</div>
+        </div>
+
+        <!-- Section: Query sent to the database -->
+        <div class="query-section">
+          <h3 class="query-title">Query sent to the database</h3>
+          <div id="sql-display" class="sql-code-box" aria-label="SQL query executed">
+            <span class="sql-placeholder">-- No query executed yet</span>
+          </div>
+        </div>
+
+        <!-- Section: Query analysis and security mechanics -->
+        <div class="query-analysis-section">
+          <h3 class="query-title" style="margin-top: 4px;">Query analysis &amp; mechanics</h3>
+          <div id="query-analysis-box" class="query-analysis-box">
+            <div class="analysis-item">
+              <span class="analysis-item-icon">💡</span>
+              <div class="analysis-item-content">
+                <div class="analysis-item-title">Query Mechanics Ready</div>
+                <div class="analysis-item-desc">Execute a category query or injection payload above to inspect the database token breakdown.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Card: Live Product Grid -->
+      <section class="card" aria-labelledby="products-heading">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border-card); padding-bottom: 12px; margin-bottom: 14px;">
+          <h2 id="products-heading" class="card-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Store products</h2>
+          <span id="product-count" style="font-size: 13px; font-weight: 600; color: var(--color-text-muted);">0 products</span>
+        </div>
+
+        <!-- Alert banner when unreleased products are revealed via SQLi -->
+        <div id="unreleased-alert" style="display: none;"></div>
+
+        <!-- Grid of products -->
+        <div id="products-grid" class="product-grid" aria-live="polite">
+          <div class="result-empty" style="grid-column: 1 / -1;">Loading products...</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Scripts: Vanilla JS, no build steps or external dependencies -->
+  <script src="shop.js"></script>
+</body>
+</html>
