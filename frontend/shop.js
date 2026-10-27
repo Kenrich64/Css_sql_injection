@@ -414,7 +414,11 @@ function renderProductsGrid(products, unreleasedCount) {
 
   productCountEl.textContent = `${products.length} product${products.length === 1 ? '' : 's'}`;
 
-  // If unreleased products are visible (released = 0), show lab solved and warning banner
+  const solvedBadgePill = document.getElementById('solved-badge-pill');
+  const solvedBottomTitle = document.getElementById('solved-bottom-title');
+  const solvedBottomDesc = document.getElementById('solved-bottom-desc');
+
+  // If unreleased products are visible (released = 0), show lab solved celebration and warning banner
   if (unreleasedCount > 0) {
     if (labSolvedBanner) labSolvedBanner.style.display = 'flex';
     unreleasedAlertEl.style.display = 'block';
@@ -423,9 +427,15 @@ function renderProductsGrid(products, unreleasedCount) {
         <span>⚠️ <strong>SQL INJECTION WARNING:</strong> ${unreleasedCount} hidden/unreleased prototype product(s) are visible because the query logic was bypassed!</span>
       </div>
     `;
+    if (solvedBadgePill) solvedBadgePill.textContent = '🎉 Lab Solved!';
+    if (solvedBottomTitle) solvedBottomTitle.textContent = 'Ready for your assignment quiz?';
+    if (solvedBottomDesc) solvedBottomDesc.textContent = `Awesome job! You bypassed the category query and revealed ${unreleasedCount} confidential prototype product(s). Complete the 10-question MCQ quiz to test your mastery or share feedback.`;
   } else {
     if (labSolvedBanner) labSolvedBanner.style.display = 'none';
     unreleasedAlertEl.style.display = 'none';
+    if (solvedBadgePill) solvedBadgePill.textContent = '📚 Assignment & Feedback';
+    if (solvedBottomTitle) solvedBottomTitle.textContent = 'Test your understanding & share feedback';
+    if (solvedBottomDesc) solvedBottomDesc.textContent = 'Reinforce your knowledge of SQL injection vulnerabilities and parameterized queries with our 10-question MCQ quiz, or share your thoughts to help improve this lab.';
   }
 
   const cardsHtml = products.map((item) => {
@@ -689,3 +699,695 @@ if (initUserSession()) {
   fetchProducts(initialCategory, initialMode);
 }
 
+
+
+/* =========================================================================
+   ASSIGNMENT: MCQ QUIZ & LAB FEEDBACK CONTROLLERS
+   ========================================================================= */
+
+// 10 Assignment Quiz Questions with Options, Correct Answers, and Explanations
+const QUIZ_QUESTIONS = [
+  {
+    id: 1,
+    question: "What is the root cause of SQL Injection in vulnerable web applications?",
+    options: {
+      A: "The database engine is configured in debug mode.",
+      B: "User-supplied input is directly concatenated into the SQL command string, blending code with data.",
+      C: "The web server does not use HTTPS/SSL encryption.",
+      D: "PostgreSQL does not support authentication controls."
+    },
+    correct: "B",
+    explanation: "Concatenating untrusted strings directly into queries mixes code with data, allowing attacker inputs to redefine SQL syntax."
+  },
+  {
+    id: 2,
+    question: "In the login bypass payload admin'--, what is the exact function of the -- sequence?",
+    options: {
+      A: "It decrements the login attempt counter.",
+      B: "It marks the remainder of the SQL statement as a comment, causing the database to ignore the password condition.",
+      C: "It escapes the single quote so the database treats it as text.",
+      D: "It acts as an SQL wildcard to match any user in the table."
+    },
+    correct: "B",
+    explanation: "In SQL, -- denotes the start of an inline comment. Everything after -- on that line is discarded by the parser, neutralizing the password check."
+  },
+  {
+    id: 3,
+    question: "In the shop lab, how does the application normally ensure unreleased prototype items remain confidential?",
+    options: {
+      A: "Unreleased products are stored in a separate, encrypted database.",
+      B: "By enforcing the server-side query condition WHERE category = '...' AND released = 1.",
+      C: "By using JavaScript in the browser to hide cards where released == 0.",
+      D: "Products with released = 0 are automatically deleted upon insertion."
+    },
+    correct: "B",
+    explanation: "The business rule is enforced by adding AND released = 1 to the SQL query so unreleased prototype items (released = 0) are filtered out."
+  },
+  {
+    id: 4,
+    question: "When an attacker submits Gifts'-- in the vulnerable category filter, why do unreleased products appear?",
+    options: {
+      A: "The payload alters the database table schema permanently.",
+      B: "The single quote closes 'Gifts' and -- discards AND released = 1, returning all gifts regardless of their release status.",
+      C: "The query forces the database to update released = 0 to released = 1.",
+      D: "The -- switches the database connection from student to administrator."
+    },
+    correct: "B",
+    explanation: "The quote terminates the string 'Gifts', and -- comments out the subsequent AND released = 1 check, instructing the database to fetch every product where category = 'Gifts'."
+  },
+  {
+    id: 5,
+    question: "What is the evaluation logic when the targeted payload ' OR category = 'Gifts'-- is injected into the vulnerable shop query?",
+    options: {
+      A: "It tests WHERE category = '' OR category = 'Gifts' while commenting out AND released = 1, returning all released and unreleased items in Gifts.",
+      B: "It creates a new category named Gifts in the database.",
+      C: "It causes an SQL syntax error because of duplicate column names.",
+      D: "It causes the database to perform a UNION SELECT on the users table."
+    },
+    correct: "A",
+    explanation: "It creates an expression where either the empty string or Gifts matches, while commenting out the release flag filter, cleanly dumping all items in the target category."
+  },
+  {
+    id: 6,
+    question: "Why does the payload ' OR 1=1-- expose products across every category in the shop?",
+    options: {
+      A: "1=1 is an always-true boolean tautology, and -- removes the released = 1 constraint, matching every row in the products table.",
+      B: "1=1 triggers an administrative debug mode in PostgreSQL.",
+      C: "The browser repeats the request once for each category.",
+      D: "1=1 instructs the database to bypass all row-level permissions."
+    },
+    correct: "A",
+    explanation: "Because 1=1 evaluates to true for every single row and the remaining conditions are commented out, the query returns all records regardless of category or release status."
+  },
+  {
+    id: 7,
+    question: "In Secure mode, the shop query runs as: SELECT * FROM products WHERE category = $1 AND released = 1. Why does the injection input Gifts'-- fail to expose unreleased products?",
+    options: {
+      A: "The database automatically deletes the characters ' and -- before running the query.",
+      B: "The placeholder $1 treats the entire input literally as data, looking for a category named \"Gifts'--\", while strictly preserving AND released = 1.",
+      C: "The backend intercepts the input and redirects the user to the login page.",
+      D: "Secure mode only permits numbers as category parameters."
+    },
+    correct: "B",
+    explanation: "In prepared statements ($1), parameter values are sent over a separate protocol channel. Quotes and dashes have no syntactic meaning, and the AND released = 1 clause remains untouched."
+  },
+  {
+    id: 8,
+    question: "What happens when an attacker submits only a single quote (') in Vulnerable mode versus Secure mode?",
+    options: {
+      A: "Both modes crash the database server.",
+      B: "Both modes log the user in as admin.",
+      C: "Vulnerable mode triggers a SQL syntax error (unmatched quote), whereas Secure mode safely binds ' as a string parameter and returns 0 rows.",
+      D: "Vulnerable mode returns 0 rows, whereas Secure mode crashes."
+    },
+    correct: "C",
+    explanation: "In Vulnerable mode, the lone quote breaks SQL string boundaries, leaving an unclosed literal. In Secure mode, the quote is safely handled as a one-character literal value."
+  },
+  {
+    id: 9,
+    question: "What is the purpose of the safety guard implemented in this lab when an input containing a semicolon (;) is submitted?",
+    options: {
+      A: "To prevent stacked queries (such as ; DROP TABLE users;) from destroying demonstration tables during student exercises.",
+      B: "It is the primary security defense against all SQL injection attacks in production.",
+      C: "Semicolons are illegal characters in standard HTTP requests.",
+      D: "To format the response as JSON."
+    },
+    correct: "A",
+    explanation: "The lab blocks semicolons to prevent students from inadvertently running stacked commands like DROP TABLE that would wipe the local database container."
+  },
+  {
+    id: 10,
+    question: "Why are parameterized queries (prepared statements) considered the gold standard defense against SQL Injection?",
+    options: {
+      A: "They automatically encrypt the database columns on disk.",
+      B: "They rely on regex filters to block dangerous words like SELECT and OR.",
+      C: "They pre-compile the SQL structure so untrusted input is strictly bound as data values and cannot alter command logic.",
+      D: "They prevent users from viewing the web application source code."
+    },
+    correct: "C",
+    explanation: "Parameterized queries separate the query compilation phase from data transmission, ensuring data can never be interpreted as executable SQL commands."
+  }
+];
+
+// Quiz state
+let quizCurrentIndex = 0;
+let userQuizAnswers = {};
+
+// Modal DOM elements
+const quizModal = document.getElementById('quiz-modal');
+const feedbackModal = document.getElementById('feedback-modal');
+const btnOpenQuiz = document.getElementById('btn-open-quiz');
+const btnOpenFeedback = document.getElementById('btn-open-feedback');
+const bannerBtnQuiz = document.getElementById('banner-btn-quiz');
+const bannerBtnFeedback = document.getElementById('banner-btn-feedback');
+const quizCloseBtn = document.getElementById('quiz-close-btn');
+const feedbackCloseBtn = document.getElementById('feedback-close-btn');
+
+// Quiz view elements
+const quizActiveView = document.getElementById('quiz-active-view');
+const quizResultsView = document.getElementById('quiz-results-view');
+const quizCurrentNumEl = document.getElementById('quiz-current-num');
+const quizTotalNumEl = document.getElementById('quiz-total-num');
+const quizProgressFill = document.getElementById('quiz-progress-fill');
+const quizAnsweredCountEl = document.getElementById('quiz-answered-count');
+const quizPillNav = document.getElementById('quiz-pill-nav');
+const quizQBadge = document.getElementById('quiz-q-badge');
+const quizQuestionText = document.getElementById('quiz-question-text');
+const quizOptionsContainer = document.getElementById('quiz-options-container');
+const quizBtnPrev = document.getElementById('quiz-btn-prev');
+const quizBtnNext = document.getElementById('quiz-btn-next');
+const quizBtnSubmit = document.getElementById('quiz-btn-submit');
+const quizWarningMsg = document.getElementById('quiz-warning-msg');
+const quizBtnRetake = document.getElementById('quiz-btn-retake');
+const quizBtnDone = document.getElementById('quiz-btn-done');
+const quizReviewList = document.getElementById('quiz-review-list');
+const quizScoreText = document.getElementById('quiz-score-text');
+const quizScorePct = document.getElementById('quiz-score-pct');
+const quizResultHeading = document.getElementById('quiz-result-heading');
+const quizResultMessage = document.getElementById('quiz-result-message');
+const quizScoreCircle = document.getElementById('quiz-score-circle');
+
+// Feedback elements
+const feedbackForm = document.getElementById('feedback-form');
+const feedbackSuccessView = document.getElementById('feedback-success-view');
+const starRatingGroup = document.getElementById('star-rating-group');
+const feedbackRatingVal = document.getElementById('feedback-rating-val');
+const starRatingHint = document.getElementById('star-rating-hint');
+const feedbackCancelBtn = document.getElementById('feedback-cancel-btn');
+const feedbackEditBtn = document.getElementById('feedback-edit-btn');
+const feedbackDoneBtn = document.getElementById('feedback-done-btn');
+const feedbackSummaryBox = document.getElementById('feedback-summary-box');
+
+const STAR_LABELS = {
+  1: '1 star - Needs Improvement',
+  2: '2 stars - Fair',
+  3: '3 stars - Good',
+  4: '4 stars - Very Good',
+  5: '5 stars - Excellent'
+};
+
+/**
+ * Open/close modal helpers
+ */
+function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+/**
+ * Initialize and render the Quiz navigation pills
+ */
+function renderQuizPills() {
+  if (!quizPillNav) return;
+  quizPillNav.innerHTML = QUIZ_QUESTIONS.map((q, idx) => {
+    const isAnswered = userQuizAnswers[q.id] != null;
+    const isActive = idx === quizCurrentIndex;
+    let cls = 'quiz-nav-dot';
+    if (isAnswered) cls += ' answered';
+    if (isActive) cls += ' active';
+    return `<button type="button" class="${cls}" data-idx="${idx}" title="Question ${idx + 1}${isAnswered ? ' (Answered)' : ''}">${idx + 1}</button>`;
+  }).join('');
+}
+
+/**
+ * Updates quiz progress indicators
+ */
+function updateQuizMeta() {
+  const total = QUIZ_QUESTIONS.length;
+  const answered = Object.keys(userQuizAnswers).length;
+  if (quizCurrentNumEl) quizCurrentNumEl.textContent = quizCurrentIndex + 1;
+  if (quizTotalNumEl) quizTotalNumEl.textContent = total;
+  if (quizAnsweredCountEl) quizAnsweredCountEl.textContent = `${answered} / ${total} answered`;
+  if (quizProgressFill) {
+    const pct = Math.round((answered / total) * 100);
+    quizProgressFill.style.width = `${Math.max(pct, 5)}%`;
+  }
+}
+
+/**
+ * Render the currently selected question
+ */
+function renderQuizQuestion() {
+  if (quizWarningMsg) {
+    quizWarningMsg.style.display = 'none';
+    quizWarningMsg.textContent = '';
+  }
+
+  const q = QUIZ_QUESTIONS[quizCurrentIndex];
+  if (!q) return;
+
+  if (quizQBadge) quizQBadge.textContent = `Question ${quizCurrentIndex + 1}`;
+  if (quizQuestionText) quizQuestionText.textContent = q.question;
+
+  // Options A, B, C, D
+  const selectedOpt = userQuizAnswers[q.id];
+  const keys = ['A', 'B', 'C', 'D'];
+  quizOptionsContainer.innerHTML = keys.map((key) => {
+    const isSelected = selectedOpt === key;
+    const text = q.options[key] || '';
+    return `
+      <div class="quiz-option-item${isSelected ? ' selected' : ''}" data-key="${key}" role="radio" aria-checked="${isSelected}" tabindex="0">
+        <span class="quiz-option-badge">${key}</span>
+        <span class="quiz-option-text">${escapeHtml(text)}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Button states
+  if (quizBtnPrev) quizBtnPrev.disabled = quizCurrentIndex === 0;
+  if (quizBtnNext) quizBtnNext.disabled = quizCurrentIndex === QUIZ_QUESTIONS.length - 1;
+
+  updateQuizMeta();
+  renderQuizPills();
+}
+
+/**
+ * Handle user selecting an option for a question
+ */
+function selectQuizOption(optionKey) {
+  const q = QUIZ_QUESTIONS[quizCurrentIndex];
+  if (!q) return;
+
+  userQuizAnswers[q.id] = optionKey;
+  renderQuizQuestion();
+
+  // If there is an unanswered next question, smoothly move forward after a small delay
+  if (quizCurrentIndex < QUIZ_QUESTIONS.length - 1 && userQuizAnswers[QUIZ_QUESTIONS[quizCurrentIndex + 1].id] == null) {
+    setTimeout(() => {
+      if (quizModal.style.display !== 'none' && quizActiveView.style.display !== 'none') {
+        quizCurrentIndex++;
+        renderQuizQuestion();
+      }
+    }, 280);
+  }
+}
+
+/**
+ * Submit the quiz and display results and complete explanation breakdown
+ */
+function submitQuiz() {
+  const total = QUIZ_QUESTIONS.length;
+  const answered = Object.keys(userQuizAnswers).length;
+
+  if (answered < total) {
+    const missing = total - answered;
+    if (quizWarningMsg) {
+      quizWarningMsg.textContent = `Please answer all questions before submitting (${missing} remaining).`;
+      quizWarningMsg.style.display = 'block';
+    }
+    // Find the first unanswered question and jump to it
+    const firstMissing = QUIZ_QUESTIONS.findIndex((q) => userQuizAnswers[q.id] == null);
+    if (firstMissing !== -1) {
+      quizCurrentIndex = firstMissing;
+      renderQuizQuestion();
+    }
+    return;
+  }
+
+  // Calculate score
+  let correctCount = 0;
+  QUIZ_QUESTIONS.forEach((q) => {
+    if (userQuizAnswers[q.id] === q.correct) {
+      correctCount++;
+    }
+  });
+
+  const pct = Math.round((correctCount / total) * 100);
+
+  // Update Score Card
+  if (quizScoreText) quizScoreText.textContent = `${correctCount}/${total}`;
+  if (quizScorePct) quizScorePct.textContent = `${pct}%`;
+
+  if (pct >= 80) {
+    if (quizResultHeading) quizResultHeading.textContent = '🎉 Excellent Mastery!';
+    if (quizResultMessage) quizResultMessage.textContent = 'You demonstrated strong command of SQL injection vulnerabilities and prepared statement security.';
+    if (quizScoreCircle) {
+      quizScoreCircle.style.backgroundColor = '#10b981';
+    }
+  } else if (pct >= 50) {
+    if (quizResultHeading) quizResultHeading.textContent = '👍 Good Effort!';
+    if (quizResultMessage) quizResultMessage.textContent = 'You have a solid foundation. Review the detailed explanations below to master the trickier edge cases.';
+    if (quizScoreCircle) {
+      quizScoreCircle.style.backgroundColor = '#2563eb';
+    }
+  } else {
+    if (quizResultHeading) quizResultHeading.textContent = '📖 Review Recommended';
+    if (quizResultMessage) quizResultMessage.textContent = 'SQL injection mechanics can be subtle. Study the explanations below and feel free to retake the quiz!';
+    if (quizScoreCircle) {
+      quizScoreCircle.style.backgroundColor = '#f59e0b';
+    }
+  }
+
+  // Render Detailed Review for every question
+  if (quizReviewList) {
+    quizReviewList.innerHTML = QUIZ_QUESTIONS.map((q, idx) => {
+      const userChoice = userQuizAnswers[q.id];
+      const isCorrect = userChoice === q.correct;
+      const cardClass = isCorrect ? 'quiz-review-card correct' : 'quiz-review-card incorrect';
+      const statusText = isCorrect ? '✅ Correct' : '❌ Incorrect';
+      const statusClass = isCorrect ? 'review-status-tag correct' : 'review-status-tag incorrect';
+
+      const userChoiceText = userChoice ? `${userChoice}: ${q.options[userChoice] || ''}` : 'None selected';
+      const correctChoiceText = `${q.correct}: ${q.options[q.correct] || ''}`;
+
+      return `
+        <article class="${cardClass}">
+          <div class="review-q-header">
+            <span class="quiz-q-badge">Question ${idx + 1}</span>
+            <span class="${statusClass}">${statusText}</span>
+          </div>
+          <h4 class="review-q-text">${escapeHtml(q.question)}</h4>
+          <div class="review-answer-row">
+            <div class="review-answer-pill ${isCorrect ? 'user-correct' : 'user-incorrect'}">
+              <span>Your Answer:</span>
+              <strong>${escapeHtml(userChoiceText)}</strong>
+            </div>
+            ${!isCorrect ? `
+              <div class="review-answer-pill correct-option">
+                <span>Correct Answer:</span>
+                <strong>${escapeHtml(correctChoiceText)}</strong>
+              </div>
+            ` : ''}
+          </div>
+          <div class="review-explanation-box">
+            <strong>Explanation:</strong> ${escapeHtml(q.explanation)}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  // Save quiz results in localStorage & send to server
+  const quizPayload = {
+    username: loggedUserEl ? loggedUserEl.textContent.trim() : 'student',
+    score: correctCount,
+    total,
+    percentage: pct,
+    answers: { ...userQuizAnswers },
+    completedAt: new Date().toISOString()
+  };
+
+  try {
+    localStorage.setItem('lab_shop_quiz', JSON.stringify(quizPayload));
+  } catch (err) {
+    console.warn('Could not save quiz to localStorage:', err);
+  }
+
+  try {
+    fetch('/api/quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quizPayload)
+    }).catch((err) => console.warn('Backend quiz endpoint error:', err));
+  } catch (err) {
+    console.warn('Could not post quiz:', err);
+  }
+
+  // Switch to results view
+  if (quizActiveView) quizActiveView.style.display = 'none';
+  if (quizResultsView) quizResultsView.style.display = 'block';
+}
+
+/**
+ * Reset quiz to initial state
+ */
+function resetQuiz() {
+  quizCurrentIndex = 0;
+  userQuizAnswers = {};
+  try {
+    localStorage.removeItem('lab_shop_quiz');
+  } catch (err) {}
+  if (quizActiveView) quizActiveView.style.display = 'block';
+  if (quizResultsView) quizResultsView.style.display = 'none';
+  renderQuizQuestion();
+}
+
+/**
+ * Setup star rating behavior for Feedback
+ */
+function setStarRating(rating) {
+  if (feedbackRatingVal) feedbackRatingVal.value = rating;
+  if (starRatingHint) starRatingHint.textContent = STAR_LABELS[rating] || `${rating} stars`;
+
+  const stars = document.querySelectorAll('.star-btn');
+  stars.forEach((star) => {
+    const val = parseInt(star.getAttribute('data-star'), 10);
+    if (val <= rating) {
+      star.classList.add('active');
+    } else {
+      star.classList.remove('active');
+    }
+  });
+}
+
+/**
+ * Submit student feedback
+ */
+async function handleFeedbackSubmit(e) {
+  e.preventDefault();
+
+  const rating = feedbackRatingVal ? feedbackRatingVal.value : '5';
+  const difficultyEl = feedbackForm.querySelector('input[name="difficulty"]:checked');
+  const clarityEl = feedbackForm.querySelector('input[name="clarity"]:checked');
+  const recommendEl = feedbackForm.querySelector('input[name="recommend"]:checked');
+  const commentsEl = document.getElementById('feedback-comments');
+
+  const valuableCheckboxes = feedbackForm.querySelectorAll('input[name="valuable"]:checked');
+  const valuable = Array.from(valuableCheckboxes).map((cb) => cb.value);
+
+  const payload = {
+    rating: parseInt(rating, 10),
+    difficulty: difficultyEl ? difficultyEl.value : 'Just Right',
+    clarity: clarityEl ? clarityEl.value : 'Very Clear',
+    recommend: recommendEl ? recommendEl.value : 'Definitely',
+    valuable,
+    comments: commentsEl ? commentsEl.value.trim() : '',
+    username: loggedUserEl ? loggedUserEl.textContent.trim() : 'student',
+  };
+
+  // Save locally in browser
+  try {
+    localStorage.setItem('lab_shop_feedback', JSON.stringify(payload));
+  } catch (err) {
+    console.warn('Could not save to localStorage:', err);
+  }
+
+  // Attempt backend save
+  try {
+    await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.warn('Backend feedback endpoint unreachable, saved locally:', err);
+  }
+
+  // Render summary card
+  if (feedbackSummaryBox) {
+    const starsEmoji = '⭐'.repeat(payload.rating);
+    feedbackSummaryBox.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div><strong>Overall Rating:</strong> ${starsEmoji} (${payload.rating}/5)</div>
+        <div><strong>Difficulty:</strong> ${escapeHtml(payload.difficulty)}</div>
+        <div><strong>Concept Clarity:</strong> ${escapeHtml(payload.clarity)}</div>
+        <div><strong>Recommendation:</strong> ${escapeHtml(payload.recommend)}</div>
+        ${payload.comments ? `<div><strong>Your Comments:</strong> "${escapeHtml(payload.comments)}"</div>` : ''}
+      </div>
+    `;
+  }
+
+  // Switch to success view
+  if (feedbackForm) feedbackForm.style.display = 'none';
+  if (feedbackSuccessView) feedbackSuccessView.style.display = 'block';
+}
+
+/**
+ * Event Bindings for Quiz & Feedback
+ */
+function initQuizAndFeedbackEvents() {
+  // Open Quiz
+  const openQuizHandler = () => {
+    openModal(quizModal);
+
+    // If already solved in local storage, reload previous score & answers
+    if (Object.keys(userQuizAnswers).length === 0) {
+      try {
+        const savedQuizJson = localStorage.getItem('lab_shop_quiz');
+        if (savedQuizJson) {
+          const savedQuiz = JSON.parse(savedQuizJson);
+          if (savedQuiz && savedQuiz.answers) {
+            userQuizAnswers = savedQuiz.answers;
+            submitQuiz();
+            return;
+          }
+        }
+      } catch (err) {}
+      resetQuiz();
+    } else if (quizResultsView && quizResultsView.style.display === 'block') {
+      // Stay on results view
+    } else {
+      renderQuizQuestion();
+    }
+  };
+
+  const headerBtnQuiz = document.getElementById('header-btn-quiz');
+  const headerBtnFeedback = document.getElementById('header-btn-feedback');
+  if (btnOpenQuiz) btnOpenQuiz.addEventListener('click', openQuizHandler);
+  if (bannerBtnQuiz) bannerBtnQuiz.addEventListener('click', openQuizHandler);
+  if (headerBtnQuiz) headerBtnQuiz.addEventListener('click', openQuizHandler);
+
+  // Open Feedback
+  const openFeedbackHandler = () => {
+    openModal(feedbackModal);
+
+    // If previously submitted, pre-fill form
+    try {
+      const savedFbJson = localStorage.getItem('lab_shop_feedback');
+      if (savedFbJson) {
+        const savedFb = JSON.parse(savedFbJson);
+        if (savedFb) {
+          if (savedFb.rating) setStarRating(savedFb.rating);
+          if (savedFb.comments) {
+            const commentsEl = document.getElementById('feedback-comments');
+            if (commentsEl) commentsEl.value = savedFb.comments;
+          }
+        }
+      }
+    } catch (err) {}
+  };
+
+  if (btnOpenFeedback) btnOpenFeedback.addEventListener('click', openFeedbackHandler);
+  if (bannerBtnFeedback) bannerBtnFeedback.addEventListener('click', openFeedbackHandler);
+  if (headerBtnFeedback) headerBtnFeedback.addEventListener('click', openFeedbackHandler);
+
+  // Close buttons
+  if (quizCloseBtn) quizCloseBtn.addEventListener('click', () => closeModal(quizModal));
+  if (feedbackCloseBtn) feedbackCloseBtn.addEventListener('click', () => closeModal(feedbackModal));
+  if (feedbackCancelBtn) feedbackCancelBtn.addEventListener('click', () => closeModal(feedbackModal));
+  if (feedbackDoneBtn) feedbackDoneBtn.addEventListener('click', () => closeModal(feedbackModal));
+  if (quizBtnDone) quizBtnDone.addEventListener('click', () => closeModal(quizModal));
+
+  // Edit feedback response
+  if (feedbackEditBtn) {
+    feedbackEditBtn.addEventListener('click', () => {
+      if (feedbackSuccessView) feedbackSuccessView.style.display = 'none';
+      if (feedbackForm) feedbackForm.style.display = 'block';
+    });
+  }
+
+  // Retake quiz
+  if (quizBtnRetake) {
+    quizBtnRetake.addEventListener('click', resetQuiz);
+  }
+
+  // Backdrop click to close
+  window.addEventListener('click', (e) => {
+    if (e.target === quizModal) closeModal(quizModal);
+    if (e.target === feedbackModal) closeModal(feedbackModal);
+  });
+
+  // Escape key to close
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (quizModal && quizModal.style.display !== 'none') closeModal(quizModal);
+      if (feedbackModal && feedbackModal.style.display !== 'none') closeModal(feedbackModal);
+    }
+  });
+
+  // Quiz navigation buttons
+  if (quizBtnPrev) {
+    quizBtnPrev.addEventListener('click', () => {
+      if (quizCurrentIndex > 0) {
+        quizCurrentIndex--;
+        renderQuizQuestion();
+      }
+    });
+  }
+
+  if (quizBtnNext) {
+    quizBtnNext.addEventListener('click', () => {
+      if (quizCurrentIndex < QUIZ_QUESTIONS.length - 1) {
+        quizCurrentIndex++;
+        renderQuizQuestion();
+      }
+    });
+  }
+
+  if (quizBtnSubmit) {
+    quizBtnSubmit.addEventListener('click', submitQuiz);
+  }
+
+  // Pill navigation click
+  if (quizPillNav) {
+    quizPillNav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.quiz-nav-dot');
+      if (!btn) return;
+      const idx = parseInt(btn.getAttribute('data-idx'), 10);
+      if (!isNaN(idx) && idx >= 0 && idx < QUIZ_QUESTIONS.length) {
+        quizCurrentIndex = idx;
+        renderQuizQuestion();
+      }
+    });
+  }
+
+  // Option select click & keyboard delegation
+  if (quizOptionsContainer) {
+    quizOptionsContainer.addEventListener('click', (e) => {
+      const item = e.target.closest('.quiz-option-item');
+      if (!item) return;
+      const key = item.getAttribute('data-key');
+      if (key) selectQuizOption(key);
+    });
+
+    quizOptionsContainer.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        const item = e.target.closest('.quiz-option-item');
+        if (!item) return;
+        e.preventDefault();
+        const key = item.getAttribute('data-key');
+        if (key) selectQuizOption(key);
+      }
+    });
+  }
+
+  // Star rating events
+  if (starRatingGroup) {
+    starRatingGroup.addEventListener('click', (e) => {
+      const star = e.target.closest('.star-btn');
+      if (!star) return;
+      const val = parseInt(star.getAttribute('data-star'), 10);
+      if (!isNaN(val)) setStarRating(val);
+    });
+
+    starRatingGroup.addEventListener('mouseover', (e) => {
+      const star = e.target.closest('.star-btn');
+      if (!star) return;
+      const val = parseInt(star.getAttribute('data-star'), 10);
+      if (!isNaN(val) && starRatingHint) {
+        starRatingHint.textContent = STAR_LABELS[val] || `${val} stars`;
+      }
+    });
+
+    starRatingGroup.addEventListener('mouseleave', () => {
+      const cur = parseInt(feedbackRatingVal.value, 10) || 5;
+      if (starRatingHint) starRatingHint.textContent = STAR_LABELS[cur] || `${cur} stars`;
+    });
+  }
+
+  // Feedback form submit
+  if (feedbackForm) {
+    feedbackForm.addEventListener('submit', handleFeedbackSubmit);
+  }
+}
+
+// Initialize quiz & feedback controllers
+initQuizAndFeedbackEvents();
+setStarRating(5);

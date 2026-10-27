@@ -328,6 +328,38 @@ app.get('/api/logs', (req, res) => {
   res.json(logs);
 });
 
+// POST /api/feedback
+app.post('/api/feedback', (req, res) => {
+  const { rating, difficulty, clarity, comments, recommend, valuable, username } = req.body || {};
+  addLog({
+    mode: 'feedback',
+    username: typeof username === 'string' ? username : 'student',
+    sql: '',
+    status: 'normal',
+    outcome: 'Feedback received: rating=' + (rating || 'N/A') + ', difficulty=' + (difficulty || 'N/A'),
+  });
+  return res.status(200).json({
+    success: true,
+    message: 'Thank you for your feedback! Your response has been recorded.',
+  });
+});
+
+// POST /api/quiz
+app.post('/api/quiz', (req, res) => {
+  const { username, score, total, percentage, answers } = req.body || {};
+  addLog({
+    mode: 'quiz',
+    username: typeof username === 'string' ? username : 'student',
+    sql: '',
+    status: 'normal',
+    outcome: 'Quiz completed: ' + score + '/' + total + ' (' + percentage + '%)',
+  });
+  return res.status(200).json({
+    success: true,
+    message: 'Quiz submission recorded successfully.',
+  });
+});
+
 // POST /api/reset
 app.post('/api/reset', async (req, res) => {
   try {

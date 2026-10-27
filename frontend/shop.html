@@ -18,17 +18,33 @@
   <div class="container">
     <!-- PortSwigger-Style Lab Solved Celebration Banner -->
     <div id="lab-solved-banner" class="lab-solved-banner" role="status" aria-live="polite">
-      <span class="lab-solved-badge">Solved</span>
-      <span><strong>Congratulations, you solved the lab!</strong> You successfully retrieved unreleased product data using SQL injection.</span>
+      <div class="lab-solved-banner-text">
+        <span class="lab-solved-badge">Solved</span>
+        <span><strong>Congratulations, you solved the lab!</strong> You successfully retrieved unreleased product data using SQL injection.</span>
+      </div>
+      <div class="lab-solved-banner-actions">
+        <button type="button" class="btn btn-sm btn-banner-quiz" id="banner-btn-quiz">📝 Take Quiz</button>
+        <button type="button" class="btn btn-sm btn-banner-feedback" id="banner-btn-feedback">💬 Feedback</button>
+      </div>
     </div>
 
     <!-- Lab Header -->
     <header class="lab-header">
       <div class="shop-header-row">
         <h1 class="lab-title">SQL injection: product category filter</h1>
-        <div class="shop-user-badge">
-          <span>Logged in as: <strong id="logged-user">admin</strong> (<span id="logged-role">admin</span>)</span>
-          <a href="index.html" class="btn btn-secondary btn-sm" id="btn-logout" title="Return to Login Lab">&larr; Return to Login</a>
+        <div class="shop-header-actions">
+          <div class="shop-user-badge">
+            <span>Logged in as: <strong id="logged-user">admin</strong> (<span id="logged-role">admin</span>)</span>
+            <a href="index.html" class="btn btn-secondary btn-sm" id="btn-logout" title="Return to Login Lab">&larr; Return to Login</a>
+          </div>
+          <div class="shop-quick-actions">
+            <button type="button" class="btn btn-primary btn-sm btn-nav-quiz" id="header-btn-quiz" title="Take the 10-Question MCQ Quiz">
+              <span>📝</span> Take Quiz
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-nav-feedback" id="header-btn-feedback" title="Share your feedback">
+              <span>💬</span> Feedback
+            </button>
+          </div>
         </div>
       </div>
       <p class="lab-description">
@@ -171,7 +187,253 @@
         </div>
       </section>
     </main>
+    <!-- Lab Solved Bottom Action Section (Shown when lab is solved) -->
+    <section id="lab-solved-actions" class="card lab-solved-bottom-card" aria-label="Assignment Quiz and Feedback">
+      <div class="solved-bottom-wrapper">
+        <div class="solved-bottom-info">
+          <div class="solved-badge-pill" id="solved-badge-pill">📚 Assignment &amp; Feedback</div>
+          <h2 class="solved-bottom-title" id="solved-bottom-title">Test your understanding &amp; share feedback</h2>
+          <p class="solved-bottom-desc" id="solved-bottom-desc">
+            Reinforce your knowledge of SQL injection vulnerabilities and parameterized queries with our 10-question MCQ quiz, or share your thoughts to help improve this lab.
+          </p>
+        </div>
+        <div class="solved-bottom-buttons">
+          <button type="button" id="btn-open-quiz" class="btn btn-primary btn-solved-action">
+            <span class="action-btn-icon">📝</span>
+            <span class="action-btn-texts">
+              <span class="action-btn-main">Take Assignment Quiz</span>
+              <span class="action-btn-sub">10 MCQ questions with explanations</span>
+            </span>
+          </button>
+          <button type="button" id="btn-open-feedback" class="btn btn-secondary btn-solved-action">
+            <span class="action-btn-icon">💬</span>
+            <span class="action-btn-texts">
+              <span class="action-btn-main">Give Lab Feedback</span>
+              <span class="action-btn-sub">Rate experience &amp; share thoughts</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
   </div>
+
+
+  <!-- Quiz Modal -->
+  <div id="quiz-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="quiz-modal-title">
+    <div class="modal-card modal-quiz">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <span class="modal-tag">Assignment</span>
+          <h2 id="quiz-modal-title" class="modal-title">SQL Injection MCQ Quiz</h2>
+        </div>
+        <button type="button" class="modal-close-btn" id="quiz-close-btn" aria-label="Close Quiz">&times;</button>
+      </div>
+
+      <!-- Quiz Active View -->
+      <div id="quiz-active-view" class="quiz-view">
+        <div class="quiz-meta-bar">
+          <div class="quiz-step-info">
+            Question <span id="quiz-current-num">1</span> of <span id="quiz-total-num">10</span>
+          </div>
+          <div class="quiz-progress-track" aria-hidden="true">
+            <div id="quiz-progress-fill" class="quiz-progress-fill" style="width: 10%;"></div>
+          </div>
+          <div id="quiz-answered-count" class="quiz-answered-count">0 / 10 answered</div>
+        </div>
+
+        <!-- Quick Question Navigation Pills -->
+        <nav class="quiz-pill-nav" id="quiz-pill-nav" aria-label="Question selector"></nav>
+
+        <!-- Current Question Box -->
+        <div class="quiz-question-box">
+          <div class="quiz-question-header">
+            <span class="quiz-q-badge" id="quiz-q-badge">Question 1</span>
+            <h3 class="quiz-question-text" id="quiz-question-text"></h3>
+          </div>
+          <div id="quiz-options-container" class="quiz-options-list"></div>
+        </div>
+
+        <!-- Quiz Footer Navigation -->
+        <div class="quiz-nav-footer">
+          <button type="button" id="quiz-btn-prev" class="btn btn-secondary btn-sm" disabled>&larr; Previous</button>
+          <div class="quiz-nav-center">
+            <span id="quiz-warning-msg" class="quiz-warning-text" style="display: none;"></span>
+          </div>
+          <div class="quiz-nav-right">
+            <button type="button" id="quiz-btn-next" class="btn btn-secondary btn-sm">Next &rarr;</button>
+            <button type="button" id="quiz-btn-submit" class="btn btn-primary btn-sm">Submit Quiz</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz Results / Review View -->
+      <div id="quiz-results-view" class="quiz-view" style="display: none;">
+        <div class="quiz-score-card">
+          <div class="quiz-score-circle" id="quiz-score-circle">
+            <span id="quiz-score-text" class="quiz-score-num">0/10</span>
+            <span id="quiz-score-pct" class="quiz-score-pct">0%</span>
+          </div>
+          <div class="quiz-score-details">
+            <h3 id="quiz-result-heading" class="quiz-result-heading">Quiz Completed</h3>
+            <p id="quiz-result-message" class="quiz-result-message">Review your answers and detailed explanations below.</p>
+            <div class="quiz-score-actions">
+              <button type="button" id="quiz-btn-retake" class="btn btn-secondary btn-sm">🔄 Retake Quiz</button>
+              <button type="button" id="quiz-btn-done" class="btn btn-primary btn-sm">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quiz-review-header">
+          <h3>Question Review &amp; Explanations</h3>
+          <p>Every question includes the correct option and the exact security explanation.</p>
+        </div>
+
+        <div id="quiz-review-list" class="quiz-review-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div id="feedback-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
+    <div class="modal-card modal-feedback">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <span class="modal-tag">Student Feedback</span>
+          <h2 id="feedback-modal-title" class="modal-title">Lab Feedback</h2>
+        </div>
+        <button type="button" class="modal-close-btn" id="feedback-close-btn" aria-label="Close Feedback">&times;</button>
+      </div>
+
+      <!-- Feedback Form -->
+      <form id="feedback-form" class="feedback-view" novalidate>
+        <p class="feedback-intro">Tell us about your learning experience with this SQL Injection lab.</p>
+
+        <!-- Star Rating -->
+        <div class="feedback-field">
+          <label class="form-label" id="rating-label">Overall Rating <span class="required">*</span></label>
+          <div class="star-rating" id="star-rating-group" role="radiogroup" aria-labelledby="rating-label">
+            <button type="button" class="star-btn active" data-star="1" aria-label="1 star">&#9733;</button>
+            <button type="button" class="star-btn active" data-star="2" aria-label="2 stars">&#9733;</button>
+            <button type="button" class="star-btn active" data-star="3" aria-label="3 stars">&#9733;</button>
+            <button type="button" class="star-btn active" data-star="4" aria-label="4 stars">&#9733;</button>
+            <button type="button" class="star-btn active" data-star="5" aria-label="5 stars">&#9733;</button>
+          </div>
+          <span id="star-rating-hint" class="star-rating-hint">5 stars - Excellent</span>
+          <input type="hidden" id="feedback-rating-val" name="rating" value="5">
+        </div>
+
+        <!-- Difficulty -->
+        <div class="feedback-field">
+          <label class="form-label">How was the lab difficulty?</label>
+          <div class="pill-options-group">
+            <label class="pill-option">
+              <input type="radio" name="difficulty" value="Too Easy">
+              <span>Too Easy</span>
+            </label>
+            <label class="pill-option">
+              <input type="radio" name="difficulty" value="Just Right" checked>
+              <span>Just Right</span>
+            </label>
+            <label class="pill-option">
+              <input type="radio" name="difficulty" value="Challenging">
+              <span>Challenging</span>
+            </label>
+            <label class="pill-option">
+              <input type="radio" name="difficulty" value="Too Difficult">
+              <span>Too Difficult</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Concept Understanding -->
+        <div class="feedback-field">
+          <label class="form-label">Did the Vulnerable vs Secure comparison make parameterized queries clear?</label>
+          <div class="pill-options-group">
+            <label class="pill-option">
+              <input type="radio" name="clarity" value="Very Clear" checked>
+              <span>Very Clear</span>
+            </label>
+            <label class="pill-option">
+              <input type="radio" name="clarity" value="Moderately Clear">
+              <span>Moderately Clear</span>
+            </label>
+            <label class="pill-option">
+              <input type="radio" name="clarity" value="Still Unclear">
+              <span>Still Unclear</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Valuable Features -->
+        <div class="feedback-field">
+          <label class="form-label">What features did you find most helpful?</label>
+          <div class="checkbox-options-grid">
+            <label class="check-option">
+              <input type="checkbox" name="valuable" value="Live SQL Query Box" checked>
+              <span>Live SQL Query Box</span>
+            </label>
+            <label class="check-option">
+              <input type="checkbox" name="valuable" value="Query Analysis Breakdown" checked>
+              <span>Query Analysis Breakdown</span>
+            </label>
+            <label class="check-option">
+              <input type="checkbox" name="valuable" value="Unreleased Products Alert" checked>
+              <span>Unreleased Products Alert</span>
+            </label>
+            <label class="check-option">
+              <input type="checkbox" name="valuable" value="Quick Example Payloads" checked>
+              <span>Quick Example Payloads</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="feedback-field">
+          <label for="feedback-comments" class="form-label">Comments or Suggestions</label>
+          <textarea id="feedback-comments" name="comments" class="form-textarea" rows="3" placeholder="What did you like most, or what could we improve?"></textarea>
+        </div>
+
+        <!-- Recommend -->
+        <div class="feedback-field">
+          <label class="form-label">Would you recommend this lab to peers?</label>
+          <div class="pill-options-group">
+            <label class="pill-option">
+              <input type="radio" name="recommend" value="Definitely" checked>
+              <span>Definitely</span>
+            </label>
+            <label class="pill-option">
+              <input type="radio" name="recommend" value="Probably">
+              <span>Probably</span>
+            </label>
+            <label class="pill-option">
+              <input type="radio" name="recommend" value="Not Sure">
+              <span>Not Sure</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="feedback-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="feedback-cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="feedback-submit-btn">Submit Feedback</button>
+        </div>
+      </form>
+
+      <!-- Feedback Success View -->
+      <div id="feedback-success-view" class="feedback-view" style="display: none;">
+        <div class="feedback-success-card">
+          <div class="success-icon-circle">✅</div>
+          <h3 class="success-title">Thank You for Your Feedback!</h3>
+          <p class="success-desc">Your response has been saved. Your feedback helps make these cybersecurity labs more effective and engaging for all students.</p>
+          <div class="success-summary" id="feedback-summary-box"></div>
+          <div class="success-actions">
+            <button type="button" id="feedback-edit-btn" class="btn btn-secondary btn-sm">Edit Response</button>
+            <button type="button" id="feedback-done-btn" class="btn btn-primary btn-sm">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Scripts: Vanilla JS, no build steps or external dependencies -->
   <script src="shop.js"></script>
